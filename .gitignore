@@ -1,3 +1,5 @@
+.ionide/
+
 public/bundle.js*
 
 # Node
