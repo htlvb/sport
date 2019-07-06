@@ -1,3 +1,4 @@
+group Web
 FSharp.Core
 Fable.Core
 Fable.Elmish.React
