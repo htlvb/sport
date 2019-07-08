@@ -1,7 +1,9 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{f2a71f9b-5d33-465a-a702-920d77279786}") = "Sport", "src/Sport.fsproj", "{E5DEFC96-37CF-4844-9C9E-CFA0A9A8AED3}"
+Project("{f2a71f9b-5d33-465a-a702-920d77279786}") = "Sport", "src\Sport.fsproj", "{E5DEFC96-37CF-4844-9C9E-CFA0A9A8AED3}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Setup", "Setup\Setup.fsproj", "{DEE10C57-B272-4AE4-AA1A-BD2BC63A3D92}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -13,5 +15,9 @@ Global
 		{E5DEFC96-37CF-4844-9C9E-CFA0A9A8AED3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E5DEFC96-37CF-4844-9C9E-CFA0A9A8AED3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E5DEFC96-37CF-4844-9C9E-CFA0A9A8AED3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DEE10C57-B272-4AE4-AA1A-BD2BC63A3D92}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DEE10C57-B272-4AE4-AA1A-BD2BC63A3D92}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DEE10C57-B272-4AE4-AA1A-BD2BC63A3D92}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DEE10C57-B272-4AE4-AA1A-BD2BC63A3D92}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

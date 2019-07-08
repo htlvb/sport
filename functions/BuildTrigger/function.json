@@ -1,0 +1,15 @@
+{
+    "bindings": [
+      {
+        "type": "httpTrigger",
+        "direction": "in",
+        "methods": [
+          "post"
+        ],
+        "authLevel": "function",
+        "name": "req"
+      }
+    ],
+    "scriptFile": "../bin/functions.dll",
+    "entryPoint": "Htlvb.Sport.BuildTrigger.run"
+}
