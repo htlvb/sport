@@ -15,19 +15,19 @@ let parseWorksheetTests =
                     {
                         Student = { LastName = "Munoz"; FirstName = "Hilda" }
                         Performances = [
-                            { Discipline = { Name = "8 min-Lauf"; Measurement = "Strecke (m)" }; Value = 1350.; Points = 625 }
-                            { Discipline = { Name = "Stangenklettern"; Measurement = "Markier-ungen" }; Value = 10.; Points = 450 }
-                            { Discipline = { Name = "Hürdenbumerang-lauf"; Measurement = "Zeit (s)" }; Value = 16.53; Points = 597 }
-                            { Discipline = { Name = "Hochsprung"; Measurement = "Höhe (cm)" }; Value = 0.; Points = 0 }
-                            { Discipline = { Name = "60 m-Sprint"; Measurement = "Zeit (s)" }; Value = 0.; Points = 0 }
-                            { Discipline = { Name = "Kugelstossen       (6,25 kg)"; Measurement = "Weite (cm)" }; Value = 0.; Points = 0 }
-                            { Discipline = { Name = "Weitsprung"; Measurement = "Weite (cm)" }; Value = 0.; Points = 0 }
-                            { Discipline = { Name = "100 m-Schwimmen"; Measurement = "Zeit (s)" }; Value = 0.; Points = 0 }
+                            { Discipline = { Name = "8 min-Lauf"; Measurement = "Strecke (m)" }; MeasurementValue = Some 1350.; Points = Some 625 }
+                            { Discipline = { Name = "Stangenklettern"; Measurement = "Markier-ungen" }; MeasurementValue = Some 10.; Points = Some 450 }
+                            { Discipline = { Name = "Hürdenbumerang-lauf"; Measurement = "Zeit (s)" }; MeasurementValue = Some 16.53; Points = Some 597 }
+                            { Discipline = { Name = "Hochsprung"; Measurement = "Höhe (cm)" }; MeasurementValue = None; Points = None }
+                            { Discipline = { Name = "60 m-Sprint"; Measurement = "Zeit (s)" }; MeasurementValue = None; Points = None }
+                            { Discipline = { Name = "Kugelstossen       (6,25 kg)"; Measurement = "Weite (cm)" }; MeasurementValue = None; Points = None }
+                            { Discipline = { Name = "Weitsprung"; Measurement = "Weite (cm)" }; MeasurementValue = None; Points = None }
+                            { Discipline = { Name = "100 m-Schwimmen"; Measurement = "Zeit (s)" }; MeasurementValue = None; Points = None }
                         ]
                     }
                 ]
                 |> Ok
-            Expect.equal data expected "Parsing should succeed"
+            Expect.equal data expected "Sample data should be parsed correctly"
         )
     ]
 

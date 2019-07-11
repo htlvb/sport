@@ -65,6 +65,9 @@ module Student =
             "firstName", Encode.string v.FirstName
         ]
 
+    let create lastName firstName =
+        { LastName = lastName; FirstName = firstName }
+
 type Discipline = {
     Name: string
     Measurement: string
@@ -85,10 +88,13 @@ module Discipline =
             "measurement", Encode.string v.Measurement
         ]
 
+    let create name measurement =
+        { Name = name; Measurement = measurement }
+
 type Performance = {
     Discipline: Discipline
-    Value: float
-    Points: int
+    MeasurementValue: float option
+    Points: int option
 }
 
 module Performance =
@@ -96,17 +102,20 @@ module Performance =
         Decode.object (fun get ->
             {
                 Discipline = get.Required.Field "discipline" Discipline.decoder
-                Value = get.Required.Field "value" Decode.float
-                Points = get.Required.Field "points" Decode.int
+                MeasurementValue = get.Required.Field "measurementValue" (Decode.option Decode.float)
+                Points = get.Required.Field "points" (Decode.option Decode.int)
             }
         )
 
     let encode v =
         Encode.object [
             "discipline", Discipline.encode v.Discipline
-            "value", Encode.float v.Value
-            "points", Encode.int v.Points
+            "measurementValue", Encode.option Encode.float v.MeasurementValue
+            "points", Encode.option Encode.int v.Points
         ]
+
+    let create discipline measurementValue points =
+        { Discipline = discipline; MeasurementValue = measurementValue; Points = points }
 
 type StudentPerformances = {
     Student: Student
@@ -128,6 +137,9 @@ module StudentPerformances =
             "performances", v.Performances |> List.map Performance.encode |> Encode.list
         ]
 
+    let create student performances =
+        { Student = student; Performances = performances }
+
 type ClassPerformances = {
     Class: Class
     Performances: StudentPerformances list
@@ -148,45 +160,116 @@ module ClassPerformances =
             "performances", v.Performances |> List.map StudentPerformances.encode |> Encode.list
         ]
 
+    let create schoolClass performances =
+        { Class = schoolClass; Performances = performances }
+
+type Cell = Cell of row: int * column: int
+
+type DisciplineParseError =
+    | DisciplineNotFound of Cell
+    | MeasurementNotFound of Cell
+    | InvalidMeasurementValue of Cell * value: string
+    | InvalidPoints of Cell * value: string
+
+type StudentParseError =
+    | EmptyStudentLastName of Cell
+    | EmptyStudentFirstName of Cell
+    | DisciplineParseErrors of DisciplineParseError list
+
 type ParseError =
     | NotEnoughRows
+    | StudentParseErrors of StudentParseError list
 
 module Worksheet =
-    let tryParse (data: JToken) =
-        match Seq.toList data with
-        | disciplines :: header :: values ->
-            values
-            |> List.takeWhile (fun row -> not <| String.IsNullOrWhiteSpace (string row.[0]))
-            |> List.choose (fun row ->
-                let student = { LastName = string row.[1]; FirstName = string row.[2] }
-                if String.IsNullOrWhiteSpace student.LastName then None
-                else
-                    {
-                        Student = student
-                        Performances =
-                            row
-                            |> Seq.indexed
-                            |> Seq.skip 3
-                            |> Seq.chunkBySize 2
-                            |> Seq.filter (fun cols -> cols.Length = 2)
-                            |> Seq.map (fun cols ->
-                                let (col1, result) = cols.[0]
-                                let (_col2, points) = cols.[1]
-                                let discipline = { Name = string disciplines.[col1]; Measurement = string header.[col1] }
-                                if not<| String.IsNullOrWhiteSpace discipline.Name then
-                                    {
-                                        Discipline = discipline
-                                        Value = string result |> tryParseFloat |> Option.defaultValue 0.
-                                        Points = string points |> tryParseInt |> Option.defaultValue 0
-                                    }
-                                    |> Some
-                                else None
-                            )
-                            |> Seq.takeWhile Option.isSome
-                            |> Seq.choose id
-                            |> Seq.toList
-                    }
-                    |> Some
+    let private tryParseStudentPerformance disciplines header rowIndex (row: JToken) =
+        let lastName =
+            let col = 1
+            row
+            |> Seq.tryItem col
+            |> Option.map string
+            |> Option.bind String.noneIfNullOrWhitespace
+            |> Result.ofOption [ EmptyStudentLastName (Cell (rowIndex, col)) ]
+        let firstName =
+            let col = 2
+            row
+            |> Seq.tryItem col
+            |> Option.map string
+            |> Option.bind String.noneIfNullOrWhitespace
+            |> Result.ofOption [ EmptyStudentFirstName (Cell (rowIndex, col)) ]
+        let student =
+            Ok Student.create
+            |> Result.apply lastName
+            |> Result.apply firstName
+
+        let performances =
+            row
+            |> Seq.indexed
+            |> Seq.skip 3
+            |> Seq.chunkBySize 2
+            |> Seq.filter (fun cols -> cols.Length = 2)
+            |> Seq.map (fun cols -> (cols.[0], cols.[1]))
+            |> Seq.takeWhile (fun ((col1, _result), (_col2, _points)) ->
+                disciplines
+                |> Seq.tryItem col1
+                |> Option.map string
+                |> Option.bind String.noneIfNullOrWhitespace
+                |> Option.isSome
             )
-            |> Ok
+            |> Seq.map (fun ((col1, measurement), (col2, points)) ->
+                let parsedDisciplineName =
+                    disciplines
+                    |> Seq.tryItem col1
+                    |> Option.map string
+                    |> Option.bind String.noneIfNullOrWhitespace
+                    |> Result.ofOption [ DisciplineNotFound (Cell (rowIndex, col1)) ]
+
+                let parsedMeasurementName =
+                    header
+                    |> Seq.tryItem col1
+                    |> Option.map string
+                    |> Option.bind String.noneIfNullOrWhitespace
+                    |> Result.ofOption [ MeasurementNotFound (Cell (rowIndex, col1)) ]
+
+                let parsedMeasurement =
+                    match String.noneIfNullOrWhitespace (string measurement) with
+                    | None -> Ok None
+                    | Some v ->
+                        tryParseFloat v
+                        |> Result.ofOption [ InvalidMeasurementValue (Cell (rowIndex, col1), measurement.ToString()) ]
+                        |> Result.map Some
+
+                let parsedPoints =
+                    match String.noneIfNullOrWhitespace (string points) with
+                    | None -> Ok None
+                    | Some v ->
+                        tryParseInt v
+                        |> Result.ofOption [ InvalidPoints (Cell (rowIndex, col2), points.ToString()) ]
+                        |> Result.map Some
+
+                let parsedDiscipline =
+                    Ok Discipline.create
+                    |> Result.apply parsedDisciplineName
+                    |> Result.apply parsedMeasurementName
+
+                Ok Performance.create
+                |> Result.apply parsedDiscipline
+                |> Result.apply parsedMeasurement
+                |> Result.apply parsedPoints
+            )
+            |> Seq.toList
+            |> List.sequenceResultApplicative
+            |> Result.mapError (List.collect id >> DisciplineParseErrors >> List.singleton)
+
+        Ok StudentPerformances.create
+        |> Result.apply student
+        |> Result.apply performances
+            
+    let tryParse (data: JToken) =
+        match data |> Seq.indexed |> Seq.toList with
+        | (_, disciplines) :: (_, header) :: values ->
+            values
+            |> List.takeWhile (fun (_index, row) -> not <| String.IsNullOrWhiteSpace (string row.[0]))
+            |> List.map (uncurry (tryParseStudentPerformance disciplines header))
+            |> List.sequenceResultApplicative
+            |> Result.mapError (List.collect id >> StudentParseErrors)
         | _ -> Error NotEnoughRows
