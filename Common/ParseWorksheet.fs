@@ -55,6 +55,11 @@ type StudentPerformances = {
     Performances: Performance list
 }
 
+type ClassPerformances = {
+    Class: Class
+    Performances: StudentPerformances list
+}
+
 type ParseError =
     | NotEnoughRows
 
@@ -78,7 +83,7 @@ module Worksheet =
                             |> Seq.filter (fun cols -> cols.Length = 2)
                             |> Seq.map (fun cols ->
                                 let (col1, result) = cols.[0]
-                                let (col2, points) = cols.[1]
+                                let (_col2, points) = cols.[1]
                                 let discipline = { Name = string disciplines.[col1]; Measurement = string header.[col1] }
                                 if not<| String.IsNullOrWhiteSpace discipline.Name then
                                     {

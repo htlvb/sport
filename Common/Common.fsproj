@@ -3,6 +3,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="List.fs" />
     <Compile Include="ParseWorksheet.fs" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />

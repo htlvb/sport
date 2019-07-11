@@ -1,4 +1,5 @@
 #load "Common/ParseWorksheet.fs"
+#load "Common/List.fs"
 #load ".fake/build.fsx/intellisense.fsx"
 
 open Fake.Core
@@ -74,8 +75,10 @@ Target.create "LoadData" (fun _ ->
                 |> List.choose (fun worksheet -> Class.tryParse worksheet.Name |> Option.map (fun c -> worksheet, c))
                 |> List.map (fun (worksheet, schoolClass) -> async {
                     let! values = worksheetsRequestBuilder.[worksheet.Id].UsedRange().Request().GetAsync() |> Async.AwaitTask
-                    let data = Worksheet.tryParse values.Values
-                    return schoolClass, data
+                    return
+                        match Worksheet.tryParse values.Values with
+                        | Ok data -> Ok { Class = schoolClass; Performances = data }
+                        | Error NotEnoughRows -> Result.Error (schoolClass, NotEnoughRows)
                 })
                 |> Async.Parallel
         }
@@ -87,15 +90,12 @@ Target.create "LoadData" (fun _ ->
             |> Async.RunSynchronously
             |> Seq.collect id
             |> Seq.toList
-        data
-        |> List.iter (fun (schoolClass, performances) ->
-            match performances with
-            | Result.Ok data ->
-                printfn "====== %A: Success" schoolClass
-                printfn "%A" data
-            | Result.Error parseError ->
-                printfn "====== %A: %O" schoolClass parseError
-        )
+            |> List.sequenceResultApplicative
+        match data with
+        | Ok performances ->
+            printfn "%d worksheets successfully parsed" (List.length performances)
+        | Error errors ->
+            failwithf "%d worksheet(s) couldn't be parsed: %A" (List.length errors) errors
 )
 
 // Target.create "Clean" (fun _ ->
