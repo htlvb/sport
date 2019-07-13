@@ -7,6 +7,6 @@ let ofOption errorValue = function
 let apply v f =
     match f, v with
     | Ok f, Ok v -> Ok (f v)
-    | Ok f, Error e -> Error e
-    | Error es, Ok v -> Error es
+    | Ok _f, Error e -> Error e
+    | Error es, Ok _v -> Error es
     | Error es, Error e -> Error (es @ e)
