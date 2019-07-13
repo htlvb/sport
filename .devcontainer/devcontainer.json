@@ -4,7 +4,7 @@
 	"dockerFile": "Dockerfile",
 
 	// Uncomment the next line if you want to publish any ports.
-	// "appPort": [],
+	"appPort": [ 8080 ],
 
 	// Uncomment the next line to run commands after the container is created.
 	// "postCreateCommand": "dotnet restore",
