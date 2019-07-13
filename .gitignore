@@ -1,5 +1,5 @@
 .ionide/
-set-secrets.ps1
+set-secrets.*
 
 public/bundle.js*
 
