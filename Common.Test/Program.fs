@@ -2,12 +2,16 @@
 open Newtonsoft.Json.Linq
 open ParseWorksheet
 open System.IO
+open System.Reflection
 
 let parseWorksheetTests =
     testList "Parse worksheet" [
         testCase "Can parse sample data" (fun () ->
             let data =
-                File.ReadAllText "Common.Test\\sample-data.json"
+                Assembly.GetExecutingAssembly().Location
+                |> Path.GetDirectoryName
+                |> Path.combine [ "sample-data"; "correct.json" ]
+                |> File.ReadAllText
                 |> JToken.Parse
                 |> Worksheet.tryParse
             let expected =
