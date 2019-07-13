@@ -78,10 +78,11 @@ Target.create "LoadData" (fun _ ->
                 |> List.choose (fun worksheet -> Class.tryParse worksheet.Name |> Option.map (fun c -> worksheet, c))
                 |> List.map (fun (worksheet, schoolClass) -> async {
                     let! values = worksheetsRequestBuilder.[worksheet.Id].UsedRange().Request().GetAsync() |> Async.AwaitTask
+                    let data = Worksheet.tryParse values.Values |> Result.mapError List.singleton
                     return
-                        match Worksheet.tryParse values.Values with
-                        | Ok data -> Ok { Class = schoolClass; Performances = data }
-                        | Error NotEnoughRows -> Result.Error (schoolClass, NotEnoughRows)
+                        Ok ClassPerformances.create
+                        |> Result.apply (Ok schoolClass)
+                        |> Result.apply data
                 })
                 |> Async.Parallel
         }
