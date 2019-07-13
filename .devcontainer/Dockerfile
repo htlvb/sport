@@ -25,6 +25,16 @@ RUN apt-get update \
     # Install F#
     && apt-get install -y fsharp \
     #
+    # Install node (see https://github.com/nodesource/distributions/blob/master/README.md)
+    && curl -sL https://deb.nodesource.com/setup_10.x | bash - \
+    && apt-get install -y nodejs \
+    #
+    # Install yarn (see https://yarnpkg.com/lang/en/docs/install/#debian-stable)
+    && curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
+    && echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list \
+    && apt-get update \
+    && apt-get install -y yarn \
+    #
     # Clean up
     && apt-get autoremove -y \
     && apt-get clean -y \
