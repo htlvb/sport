@@ -3,6 +3,8 @@ set-secrets.*
 
 public/bundle.js*
 
+public/api/*
+
 # Node
 node_modules/
 

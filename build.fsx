@@ -1,5 +1,7 @@
 #load "Common/Utils.fs"
 #load "Common/String.fs"
+#load "Common/Path.fs"
+#load "Common/File.fs"
 #load "Common/Result.fs"
 #load "Common/List.fs"
 #load "Common/ParseWorksheet.fs"
@@ -18,6 +20,7 @@ open System.Net
 open System.Net.Http.Headers
 open System.Text.RegularExpressions
 open System.Threading.Tasks
+open Thoth.Json.Net
 
 Target.initEnvironment ()
 
@@ -98,6 +101,11 @@ Target.create "LoadData" (fun _ ->
         match data with
         | Ok performances ->
             printfn "%d worksheets successfully parsed" (List.length performances)
+            performances
+            |> List.map ClassPerformances.encode
+            |> Encode.list
+            |> Encode.toString 2
+            |> File.writeAllText (__SOURCE_DIRECTORY__ |> global.Path.combine [ "public"; "api"; "achtkampf"; "data.json" ])
         | Error errors ->
             failwithf "%d worksheet(s) couldn't be parsed: %A" (List.length errors) errors
 )

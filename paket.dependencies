@@ -20,7 +20,7 @@ group Build
     nuget FSharp.Core
     nuget Microsoft.Graph
     nuget Microsoft.Identity.Client
-nuget Thoth.Json.Net
+    nuget Thoth.Json.Net
 
 group Test
     source https://api.nuget.org/v3/index.json
