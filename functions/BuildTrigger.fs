@@ -1,4 +1,4 @@
-namespace Htlvb.Sport
+namespace Sport
 
 open Microsoft.AspNetCore.Mvc
 open Microsoft.AspNetCore.Http

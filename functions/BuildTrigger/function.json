@@ -11,5 +11,5 @@
       }
     ],
     "scriptFile": "../bin/functions.dll",
-    "entryPoint": "Htlvb.Sport.BuildTrigger.run"
+    "entryPoint": "Sport.BuildTrigger.run"
 }
