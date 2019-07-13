@@ -1,5 +1,8 @@
-#load "Common/ParseWorksheet.fs"
+#load "Common/Utils.fs"
+#load "Common/String.fs"
+#load "Common/Result.fs"
 #load "Common/List.fs"
+#load "Common/ParseWorksheet.fs"
 #load ".fake/build.fsx/intellisense.fsx"
 
 open Fake.Core
