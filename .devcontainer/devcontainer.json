@@ -10,8 +10,7 @@
 	"postCreateCommand": "dotnet restore && yarn install",
 
 	"extensions": [
-		"Ionide.Ionide-fsharp",
-		"ms-vscode.csharp"
+		"Ionide.Ionide-fsharp"
 	],
 	"settings": {
 		"FSharp.fsacRuntime":"netcore"
