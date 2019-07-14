@@ -7,7 +7,7 @@
 	"appPort": [ 8080 ],
 
 	// Uncomment the next line to run commands after the container is created.
-	// "postCreateCommand": "dotnet restore",
+	"postCreateCommand": "dotnet restore && yarn install",
 
 	"extensions": [
 		"Ionide.Ionide-fsharp",
