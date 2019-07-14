@@ -104,6 +104,7 @@ module.exports = {
     },
     // Configuration for webpack-dev-server
     devServer: {
+        host: '0.0.0.0',
         publicPath: "/",
         contentBase: resolve(CONFIG.assetsDir),
         port: CONFIG.devServerPort,
