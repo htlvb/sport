@@ -3,7 +3,11 @@
 open Newtonsoft.Json.Linq
 open System
 open System.Text.RegularExpressions
+#if FABLE_COMPILER
+open Thoth.Json
+#else
 open Thoth.Json.Net
+#endif
 
 type Class = {
     Level: int
@@ -14,13 +18,13 @@ type Class = {
 
 module Class =
     let tryParse text =
-        let m = Regex.Match(text, @"^(?<level>\d+)(?<parallelClass>\w)(?<type>\w)(?<department>\w+)$")
+        let m = Regex.Match(text, @"^(\d+)(\w)(\w)(\w+)$")
         if m.Success then
             Some {
-                Level = int m.Groups.["level"].Value
-                ParallelClass = m.Groups.["parallelClass"].Value
-                Type = m.Groups.["type"].Value
-                Department = m.Groups.["department"].Value
+                Level = int m.Groups.[1].Value
+                ParallelClass = m.Groups.[2].Value
+                Type = m.Groups.[3].Value
+                Department = m.Groups.[4].Value
             }
         else None
 
@@ -180,6 +184,7 @@ type ParseError =
     | NotEnoughRows
     | StudentParseErrors of StudentParseError list
 
+#if !FABLE_COMPILER
 module Worksheet =
     let private tryParseStudentPerformance disciplines header rowIndex (row: JToken) =
         let lastName =
@@ -273,3 +278,4 @@ module Worksheet =
             |> List.sequenceResultApplicative
             |> Result.mapError (List.collect id >> StudentParseErrors)
         | _ -> Error NotEnoughRows
+#endif
