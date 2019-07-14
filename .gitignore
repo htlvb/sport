@@ -1,4 +1,5 @@
 .ionide/
+.femto/
 set-secrets.*
 
 public/bundle.js*
