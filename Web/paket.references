@@ -1,7 +1,12 @@
 group Web
-FSharp.Core
 Fable.Core
-Fable.Elmish.React
 Fable.Elmish.Browser
 Fable.Elmish.Debugger
 Fable.Elmish.HMR
+Fable.Elmish.Nile
+Fable.Elmish.React
+Fable.Elmish.Streams
+FSharp.Core
+Fulma
+Thoth.Fetch
+Thoth.Json

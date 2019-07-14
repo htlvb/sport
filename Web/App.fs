@@ -1,73 +1,133 @@
-module App.View
+module App
 
 open Elmish
 open Elmish.Navigation
+open Elmish.Streams
 open Elmish.UrlParser
-open Fable.Core
+open Fable.Elmish.Nile
 open Fable.Core.JsInterop
-open Fable.Import
-open Types
-open App.State
-open Global
+open FSharp.Control
+open Fulma
+open ParseWorksheet
+open Thoth.Fetch
+open Thoth.Json
 
 importAll "../sass/main.sass"
+
+type Page =
+    | Achtkampf
+
+let toHash page =
+    match page with
+    | Achtkampf -> "#achtkampf"
+
+let pageParser =
+    oneOf [
+        map Achtkampf (s "achtkampf")
+    ]
+
+type Msg =
+    | AchtkampfMsg of Achtkampf.Msg
+
+type NavigationError =
+    | InvalidUrl
+
+type Model = {
+    CurrentPage: Result<Page, NavigationError>
+    Achtkampf: Achtkampf.Model
+}
+
+let urlUpdate (result : Page option) model =
+    match result with
+    | None ->
+        { model with CurrentPage = Error InvalidUrl }
+    | Some page ->
+        { model with CurrentPage = Ok page }
+
+let init result =
+    { CurrentPage = Ok Achtkampf; Achtkampf = Achtkampf.init }
+    |> urlUpdate result
+
+let update msg model =
+    match msg with
+    | AchtkampfMsg msg -> { model with Achtkampf = Achtkampf.update msg model.Achtkampf }
 
 open Fable.React
 open Fable.React.Props
 
-let menuItem label page currentPage =
-    li
-      [ ]
-      [ a
-          [ classList [ "is-active", page = currentPage ]
-            Href (toHash page) ]
-          [ str label ] ]
+let view model dispatch =
+    let header =
+        Navbar.navbar [ Navbar.Color IsInfo ] [
+            Navbar.Brand.div [] [
+                Navbar.Item.a [ Navbar.Item.Props [ Href "#" ] ]
+                    [ img [ Style [ Width "5em" ]
+                            Src "img/logo_with_bg.svg" ] ]
+            ]
+            Navbar.Item.a [ Navbar.Item.IsTab; Navbar.Item.IsActive true ] [ str "Achtkampf 💪" ]
+        ]
 
-let menu currentPage =
-  aside
-    [ ClassName "menu" ]
-    [ p
-        [ ClassName "menu-label" ]
-        [ str "General" ]
-      ul
-        [ ClassName "menu-list" ]
-        [ menuItem "Home" Home currentPage
-          menuItem "Counter sample" Counter currentPage
-          menuItem "About" Page.About currentPage ] ]
+    div [] [
+        Hero.hero [ Hero.Color IsDark; Hero.IsBold; Hero.IsFullHeight ] [
+            Hero.head [] [ header ]
+            Hero.body [] [ Achtkampf.mainView ]
+            Hero.foot [] [ Achtkampf.footerView ]
+        ]
+    ]
 
-let root model dispatch =
+let stream states msgs =
+    let navigationErrors =
+        states
+        |> AsyncRx.map (snd >> fun state -> state.CurrentPage)
+        |> AsyncRx.distinctUntilChanged
+        |> AsyncRx.choose (function
+            | Error InvalidUrl -> Some ()
+            | _ -> None
+        )
+    let navigationPages =
+        states
+        |> AsyncRx.map (snd >> fun state -> state.CurrentPage)
+        |> AsyncRx.distinctUntilChanged
+        |> AsyncRx.choose (function
+            | Ok page -> Some page
+            | _ -> None
+        )
+        |> AsyncRx.startWith [ Achtkampf ]
+    let modifyUrl url =
+        AsyncRx.flatMapLatest (fun e ->
+            AsyncRx.create (fun observer -> async {
+                Navigation.modifyUrl url
+                |> List.iter (fun sub -> sub (observer.OnNextAsync >> Async.StartImmediate))
+                return AsyncDisposable.Empty
+            })
+        )
 
-  let pageHtml page =
-    match page with
-    | Page.About -> Info.View.root
-    | Counter -> Counter.View.root model.Counter (CounterMsg >> dispatch)
-    | Home -> Home.View.root model.Home (HomeMsg >> dispatch)
+    [
+        navigationPages
+        |> AsyncRx.flatMapLatest (fun page ->
+            navigationErrors
+            |> modifyUrl (toHash page)
+        )
 
-  div
-    []
-    [ Navbar.View.root
-      div
-        [ ClassName "section" ]
-        [ div
-            [ ClassName "container" ]
-            [ div
-                [ ClassName "columns" ]
-                [ div
-                    [ ClassName "column is-3" ]
-                    [ menu model.CurrentPage ]
-                  div
-                    [ ClassName "column" ]
-                    [ pageHtml model.CurrentPage ] ] ] ] ]
+        (
+            states |> AsyncRx.choose (fun (msg, state) -> match msg with | Some (AchtkampfMsg msg) -> Some (msg, state.Achtkampf) | _ -> None ),
+            msgs |> AsyncRx.choose (function | AchtkampfMsg msg -> Some msg)
+        )
+        ||> Achtkampf.stream
+        |> AsyncRx.map AchtkampfMsg
+    ]
+    |> AsyncRx.mergeSeq
 
 open Elmish.React
 open Elmish.Debug
 open Elmish.HMR
 
 // App
-Program.mkProgram init update root
-|> Program.toNavigable (parseHash pageParser) urlUpdate
+Program.mkSimple init update view
+|> Program.withStream stream
+|> Program.toNavigable (parseHash pageParser) (fun p m -> urlUpdate p m, Cmd.none)
 #if DEBUG
 |> Program.withDebugger
+|> Program.withConsoleTrace
 #endif
 |> Program.withReactBatched "elmish-app"
 |> Program.run

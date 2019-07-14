@@ -2,12 +2,15 @@ group Web
     source https://api.nuget.org/v3/index.json
     storage:none
 
-    nuget Fable.Elmish.HMR
-    nuget FSharp.Core
     nuget Fable.Core
-    nuget Fable.Elmish.React
-    nuget Fable.Elmish.Browser
     nuget Fable.Elmish.Debugger
+    nuget Fable.Elmish.HMR
+    nuget Fable.Elmish.Nile
+    nuget Fable.Elmish.React
+    nuget Fable.Elmish.Streams
+    nuget FSharp.Core
+    nuget Fulma
+    nuget Thoth.Fetch
 
 // [ FAKE GROUP ]
 group Build
