@@ -145,11 +145,10 @@ let view model dispatch =
             Section.section [] [
                 Container.container [] [
                     Heading.h1 [] [ str (sprintf "Achtkampf %s" (Group.toString model.SelectedGroup)) ]
-                    Table.table [ Table.IsHoverable; Table.IsBordered; Table.IsStriped ] [
+                    Table.table [ Table.IsHoverable; Table.IsBordered; Table.IsStriped; Table.IsFullWidth ] [
                         thead [] [
                             tr [] [
-                                yield th [ ColSpan 3 ] [ str (Group.toString model.SelectedGroup) ]
-                                yield th [] []
+                                yield th [ ColSpan 4 ] []
                                 for discipline in disciplines ->
                                     th [ ColSpan 2 ] [ str discipline.Name ]
                             ]
