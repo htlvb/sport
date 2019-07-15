@@ -28,6 +28,9 @@ module Class =
             }
         else None
 
+    let toString v =
+        sprintf "%d%s%s%s" v.Level v.ParallelClass v.Type v.Department
+
     let decoder : Decoder<_> =
         Decode.string |> Decode.andThen (fun text ->
             match tryParse text with
@@ -35,7 +38,7 @@ module Class =
             | None -> Decode.fail (sprintf "Can't decode \"%s\" as class" text))
 
     let encode v =
-        sprintf "%d%s%s%s" v.Level v.ParallelClass v.Type v.Department
+        toString v
         |> Encode.string
 
 let tryParseFloat text =
@@ -224,14 +227,14 @@ module Worksheet =
                 let parsedDisciplineName =
                     disciplines
                     |> Seq.tryItem col1
-                    |> Option.map string
+                    |> Option.map (string >> String.removeDuplicateWhitespace)
                     |> Option.bind String.noneIfNullOrWhitespace
                     |> Result.ofOption [ DisciplineNotFound (Cell (rowIndex, col1)) ]
 
                 let parsedMeasurementName =
                     header
                     |> Seq.tryItem col1
-                    |> Option.map string
+                    |> Option.map (string >> String.removeDuplicateWhitespace)
                     |> Option.bind String.noneIfNullOrWhitespace
                     |> Result.ofOption [ MeasurementNotFound (Cell (rowIndex, col1)) ]
 

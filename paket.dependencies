@@ -8,6 +8,7 @@ group Web
     nuget Fable.Elmish.Nile
     nuget Fable.Elmish.React
     nuget Fable.Elmish.Streams
+    nuget Fable.FontAwesome.Free
     nuget FSharp.Core
     nuget Fulma
     nuget Thoth.Fetch

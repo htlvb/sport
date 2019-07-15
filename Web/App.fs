@@ -57,21 +57,20 @@ open Fable.React.Props
 
 let view model dispatch =
     let header =
-        Navbar.navbar [ Navbar.Color IsInfo ] [
+        Navbar.navbar [] [
             Navbar.Brand.div [] [
                 Navbar.Item.a [ Navbar.Item.Props [ Href "#" ] ]
                     [ img [ Style [ Width "5em" ]
                             Src "img/logo_with_bg.svg" ] ]
             ]
-            Navbar.Item.a [ Navbar.Item.IsTab; Navbar.Item.IsActive true ] [ str "Achtkampf 💪" ]
+            Navbar.Start.div [] [
+                Navbar.Item.a [ Navbar.Item.IsTab; Navbar.Item.IsActive true ] [ str "Achtkampf 💪" ]
+            ]
         ]
 
     div [] [
-        Hero.hero [ Hero.Color IsDark; Hero.IsBold; Hero.IsFullHeight ] [
-            Hero.head [] [ header ]
-            Hero.body [] [ Achtkampf.mainView ]
-            Hero.foot [] [ Achtkampf.footerView ]
-        ]
+        yield header
+        yield! Achtkampf.view model.Achtkampf (AchtkampfMsg >> dispatch)
     ]
 
 let stream states msgs =
@@ -109,7 +108,12 @@ let stream states msgs =
         )
 
         (
-            states |> AsyncRx.choose (fun (msg, state) -> match msg with | Some (AchtkampfMsg msg) -> Some (msg, state.Achtkampf) | _ -> None ),
+            states
+            |> AsyncRx.choose (fun (msg, state) ->
+                match msg with
+                | None -> Some (None, state.Achtkampf)
+                | Some (AchtkampfMsg msg) -> Some (Some msg, state.Achtkampf)
+            ),
             msgs |> AsyncRx.choose (function | AchtkampfMsg msg -> Some msg)
         )
         ||> Achtkampf.stream
