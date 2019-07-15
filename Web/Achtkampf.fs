@@ -170,7 +170,7 @@ let view model dispatch =
                                     yield td [] [ str (sprintf "%s %s" (studentPerformances.Student.LastName.ToUpper()) studentPerformances.Student.FirstName) ]
                                     yield td [] [ str (sprintf "%d" studentPerformances.TotalPoints) ]
                                     for performance in studentPerformances.Performances do
-                                        yield td [] [ str (performance.MeasurementValue |> Option.map (sprintf "%.2f") |> Option.defaultValue "") ]
+                                        yield td [] [ str (performance.MeasurementValue |> Option.map (sprintf "%g") |> Option.defaultValue "") ]
                                         yield td [] [ str (performance.Points |> Option.map (sprintf "%d") |> Option.defaultValue "") ]
                                 ]
                         ]
