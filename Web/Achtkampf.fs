@@ -54,11 +54,13 @@ module Group =
         | All ->
             data
             |> List.sortByDescending (fun studentPerformances -> studentPerformances.TotalPoints)
+            |> List.takeWhile (fun studentPerformances -> studentPerformances.TotalPoints > 0)
             |> List.truncate 40
         | Level level ->
             data
             |> List.filter (fun studentPerformances -> studentPerformances.Class.Level = level)
             |> List.sortByDescending (fun studentPerformances -> studentPerformances.TotalPoints)
+            |> List.takeWhile (fun studentPerformances -> studentPerformances.TotalPoints > 0)
             |> List.truncate 40
         | Class schoolClass ->
             data
