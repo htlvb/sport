@@ -59,6 +59,7 @@ module Group =
             data
             |> List.filter (fun studentPerformances -> studentPerformances.Class.Level = level)
             |> List.sortByDescending (fun studentPerformances -> studentPerformances.TotalPoints)
+            |> List.truncate 40
         | Class schoolClass ->
             data
             |> List.filter (fun classPerformances -> classPerformances.Class = schoolClass)
