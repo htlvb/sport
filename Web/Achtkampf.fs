@@ -42,6 +42,8 @@ module CalculatedStudentPerformances =
 type Msg =
     | LoadAchtkampfResponse of Result<ClassPerformances list, FetchError>
     | SelectGroup of Group
+    | AddStudentToComparison of CalculatedStudentPerformances
+    | RemoveStudentFromComparison of CalculatedStudentPerformances
 
 module Group =
     let toString = function
@@ -70,6 +72,7 @@ module Group =
 type LoadedModel = {
     Data: ClassPerformances list
     SelectedGroup: Group
+    StudentsToCompare: CalculatedStudentPerformances list
 }
 
 type Model =
@@ -82,12 +85,18 @@ let init = NotLoaded
 let update msg model =
     match model, msg with
     | _, LoadAchtkampfResponse (Ok classPerformances) ->
-        Loaded { Data = classPerformances; SelectedGroup = All }
+        Loaded { Data = classPerformances; SelectedGroup = All; StudentsToCompare = [] }
     | _, LoadAchtkampfResponse (Error error) ->
         LoadError error
     | Loaded model, SelectGroup group ->
         Loaded { model with SelectedGroup = group }
     | _, SelectGroup _ -> model
+    | Loaded model, AddStudentToComparison student ->
+        Loaded { model with StudentsToCompare = model.StudentsToCompare @ [ student ] }
+    | _, AddStudentToComparison _ -> model
+    | Loaded model, RemoveStudentFromComparison student ->
+        Loaded { model with StudentsToCompare = model.StudentsToCompare |> List.except [ student ] }
+    | _, RemoveStudentFromComparison _ -> model
 
 open Fable.React
 open Fable.React.Props
@@ -127,8 +136,32 @@ let view model dispatch =
                     |> List.sortBy (fun v -> (v.Level, v.ParallelClass, v.Type, v.Department))
                     |> List.map Group.Class
             ]
+        let tableHeader =
+            [
+                tr [] [
+                    yield th [ ColSpan 4 ] []
+                    for discipline in disciplines ->
+                        th [ ColSpan 2 ] [ str discipline.Name ]
+                ]
+                tr [] [
+                    yield th [] [ Fa.i [ Fa.Solid.Hashtag ] [] ]
+                    yield th [] [ Fa.i [ Fa.Solid.Users ] [] ]
+                    yield th [] [ Fa.i [ Fa.Solid.User ] [] ]
+                    yield th [] [ Fa.i [ Fa.Solid.Trophy; Fa.Props [ Title "Gesamtpunkte" ] ] [] ]
+                    for discipline in disciplines do
+                        yield th [] [ str discipline.Measurement ]
+                        yield th [] [ Fa.i [ Fa.Solid.Trophy; Fa.Props [ Title "Punkte" ] ] [] ]
+                ]
+            ]
+        let studentPerformanceRow studentPerformances =
+            [
+                yield td [] [ str (sprintf "%d" studentPerformances.TotalPoints) ]
+                for performance in studentPerformances.Performances do
+                    yield td [] [ str (performance.MeasurementValue |> Option.map (sprintf "%g") |> Option.defaultValue "") ]
+                    yield td [] [ str (performance.Points |> Option.map (sprintf "%d") |> Option.defaultValue "") ]
+            ]
         [
-            Section.section [] [
+            yield Section.section [] [
                 Container.container [] [
                     Button.list [ Button.List.IsCentered ] [
                         for group in groups ->
@@ -142,37 +175,97 @@ let view model dispatch =
                 ]
             ]
 
-            Section.section [] [
-                Container.container [] [
-                    Heading.h1 [] [ str (sprintf "Achtkampf %s" (Group.toString model.SelectedGroup)) ]
-                    Table.table [ Table.IsHoverable; Table.IsBordered; Table.IsStriped; Table.IsFullWidth ] [
-                        thead [] [
-                            tr [] [
-                                yield th [ ColSpan 4 ] []
-                                for discipline in disciplines ->
-                                    th [ ColSpan 2 ] [ str discipline.Name ]
-                            ]
-                            tr [] [
-                                yield th [] [ Fa.i [ Fa.Solid.Hashtag ] [] ]
-                                yield th [] [ Fa.i [ Fa.Solid.Users ] [] ]
-                                yield th [] [ Fa.i [ Fa.Solid.User ] [] ]
-                                yield th [] [ Fa.i [ Fa.Solid.Trophy; Fa.Props [ Title "Gesamtpunkte" ] ] [] ]
-                                for discipline in disciplines do
-                                    yield th [] [ str discipline.Measurement ]
-                                    yield th [] [ Fa.i [ Fa.Solid.Trophy; Fa.Props [ Title "Punkte" ] ] [] ]
+            if List.length model.StudentsToCompare > 1 then
+                yield Section.section [] [
+                    Container.container [] [
+                        Heading.h2 [] [ str "Vergleich " ]
+                        Table.table [ Table.IsBordered; Table.IsFullWidth ] [
+                            thead [] tableHeader
+                            tbody [] [
+                                let studentRow i studentPerformances =
+                                    tr [] [
+                                        yield td [] [ str (sprintf "%d" (i + 1)) ]
+                                        yield td [] [ str (Class.toString studentPerformances.Class) ]
+                                        yield td [] [
+                                            div [ Style [ Display DisplayOptions.Flex; JustifyContent "space-between"; AlignItems AlignItemsOptions.Center ] ] [
+                                                span [] [ str (Student.fullName studentPerformances.Student) ]
+                                                Delete.delete
+                                                    [
+                                                        Delete.Props [ Title "Vom Vergleich entfernen"; Style [ MarginLeft "10px" ] ]
+                                                        Delete.OnClick (fun _ev -> dispatch (RemoveStudentFromComparison studentPerformances))
+                                                    ]
+                                                    []
+                                            ]
+                                        ]
+                                        yield! studentPerformanceRow studentPerformances
+                                    ]
+                                let diffColPoints v1 v2 =
+                                    let className =
+                                        if v1 > v2 then "has-background-success"
+                                        elif v1 = v2 then "has-background-warning"
+                                        else "has-background-danger"
+                                    td [ Class className ] [ str (sprintf "%+d" (v1 - v2)) ]
+
+                                let diffColsPerformance p1 p2 =
+                                    let p1Points = Option.defaultValue 0 p1.Points
+                                    let p2Points = Option.defaultValue 0 p2.Points
+                                    let p1Value = Option.defaultValue 0. p1.MeasurementValue
+                                    let p2Value = Option.defaultValue 0. p2.MeasurementValue
+
+                                    let className =
+                                        if p1Points > p2Points then "has-background-success"
+                                        elif p1Points = p2Points then "has-background-warning"
+                                        else "has-background-danger"
+                                    let (sign, diff) =
+                                        let r = System.Math.Round(p1Value - p2Value, 5)
+                                        if r < 0. then ("", r)
+                                        else ("+", r)
+                                    [
+                                        yield td [ Class className ] [ str (sprintf "%s%g" sign diff) ]
+                                        yield diffColPoints p1Points p2Points
+                                    ]
+
+                                let diffRow s1 s2 =
+                                    tr [] [
+                                        yield td [ ColSpan 3 ] []
+                                        yield diffColPoints s1.TotalPoints s2.TotalPoints
+                                        yield!
+                                            List.zip s1.Performances s2.Performances
+                                            |> List.collect (uncurry diffColsPerformance)
+                                    ]
+
+                                for (i1, s1), (i2, s2) in model.StudentsToCompare |> List.indexed |> List.pairwise do
+                                    if i1 = 0 then
+                                        yield studentRow i1 s1
+                                    yield diffRow s1 s2
+                                    yield studentRow i2 s2
                             ]
                         ]
+                    ]
+                ]
+
+            yield Section.section [] [
+                Container.container [] [
+                    Heading.h2 [] [ str (sprintf "Achtkampf %s" (Group.toString model.SelectedGroup)) ]
+                    Table.table [ Table.IsHoverable; Table.IsBordered; Table.IsStriped; Table.IsFullWidth ] [
+                        thead [] tableHeader
+                        tfoot [] (List.rev tableHeader)
                         tbody [] [
                             for (i, studentPerformances) in List.indexed data ->
-                                tr [] [
-                                    yield td [] [ str (sprintf "%d" (i + 1)) ]
-                                    yield td [] [ str (Class.toString studentPerformances.Class) ]
-                                    yield td [] [ str (sprintf "%s %s" (studentPerformances.Student.LastName.ToUpper()) studentPerformances.Student.FirstName) ]
-                                    yield td [] [ str (sprintf "%d" studentPerformances.TotalPoints) ]
-                                    for performance in studentPerformances.Performances do
-                                        yield td [] [ str (performance.MeasurementValue |> Option.map (sprintf "%g") |> Option.defaultValue "") ]
-                                        yield td [] [ str (performance.Points |> Option.map (sprintf "%d") |> Option.defaultValue "") ]
-                                ]
+                                tr
+                                    [
+                                        if List.contains studentPerformances model.StudentsToCompare then
+                                            yield OnClick (fun _ev -> dispatch (RemoveStudentFromComparison studentPerformances))
+                                            yield ClassName "is-selected"
+                                        else
+                                            yield OnClick (fun _ev -> dispatch (AddStudentToComparison studentPerformances))
+                                    ]
+                                    [
+                                        yield td [] [ str (sprintf "%d" (i + 1)) ]
+                                        yield td [] [ str (Class.toString studentPerformances.Class) ]
+                                        yield td [] [ str (Student.fullName studentPerformances.Student) ]
+                                        yield! studentPerformanceRow studentPerformances
+                                    ]
                         ]
                     ]
                 ]

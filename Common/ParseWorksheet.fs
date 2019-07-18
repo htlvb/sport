@@ -51,7 +51,6 @@ let tryParseInt text =
     | (true, value) -> Some value
     | _ -> None
 
-
 type Student = {
     LastName: string
     FirstName: string
@@ -74,6 +73,9 @@ module Student =
 
     let create lastName firstName =
         { LastName = lastName; FirstName = firstName }
+
+    let fullName student =
+        sprintf "%s %s" (student.LastName.ToUpper()) student.FirstName
 
 type Discipline = {
     Name: string
