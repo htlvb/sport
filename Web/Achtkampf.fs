@@ -44,6 +44,7 @@ type Msg =
     | SelectGroup of Group
     | AddStudentToComparison of CalculatedStudentPerformances
     | RemoveStudentFromComparison of CalculatedStudentPerformances
+    | ResetComparison
 
 module Group =
     let toString = function
@@ -97,6 +98,9 @@ let update msg model =
     | Loaded model, RemoveStudentFromComparison student ->
         Loaded { model with StudentsToCompare = model.StudentsToCompare |> List.except [ student ] }
     | _, RemoveStudentFromComparison _ -> model
+    | Loaded model, ResetComparison ->
+        Loaded { model with StudentsToCompare = [] }
+    | _, ResetComparison _ -> model
 
 open Fable.React
 open Fable.React.Props
@@ -178,7 +182,15 @@ let view model dispatch =
             if List.length model.StudentsToCompare > 1 then
                 yield Section.section [] [
                     Container.container [] [
-                        Heading.h2 [] [ str "Vergleich " ]
+                        Heading.h2 [] [
+                            str "Vergleich 🤼‍♀️"
+                            Delete.delete
+                                [
+                                    Delete.Props [ Title "Vergleich entfernen"; Style [ MarginLeft "10px"; VerticalAlign "middle" ] ]
+                                    Delete.OnClick (fun _ev -> dispatch ResetComparison)
+                                ]
+                                []
+                        ]
                         Table.table [ Table.IsBordered; Table.IsFullWidth ] [
                             thead [] tableHeader
                             tbody [] [
