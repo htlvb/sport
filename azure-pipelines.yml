@@ -13,3 +13,8 @@ steps:
 
 - script: yarn webpack
   displayName: 'Build web app'
+
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: '$(Pipeline.Workspace)/deploy'
+    artifact: 'main'
