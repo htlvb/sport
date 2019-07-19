@@ -295,7 +295,7 @@ let view model dispatch =
 let stream states msgs =
     let loadAchtkampfData =
         AsyncRx.ofPromise (promise {
-            let! response = Fetch.tryFetchAs ("/api/achtkampf/data.json", Decode.list ClassPerformances.decoder)
+            let! response = Fetch.tryFetchAs ("api/achtkampf/data.json", Decode.list ClassPerformances.decoder)
             return response |> Result.mapError DecodeError
         })
         |> AsyncRx.catch (HttpError >> Error >> AsyncRx.single)
