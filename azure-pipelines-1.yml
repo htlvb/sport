@@ -8,7 +8,9 @@ steps:
   inputs:
     command: 'run'
     projects: 'DataLoader'
+  displayName: 'Run DataLoader'
 - task: PublishPipelineArtifact@1
   inputs:
     targetPath: 'public/api'
     artifact: 'main'
+  displayName: 'Publish loaded data'
