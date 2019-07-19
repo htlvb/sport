@@ -1,0 +1,20 @@
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- script: yarn install --frozen-lockfile
+  displayName: 'Restore npm packages'
+
+- script: dotnet restore
+  displayName: 'Restore NuGet packages'
+
+- script: yarn webpack
+  displayName: 'Build web app'
+
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: '$(System.DefaultWorkingDirectory)/deploy'
+    artifact: 'main'
