@@ -18,5 +18,5 @@ steps:
 - task: PublishPipelineArtifact@1
   inputs:
     targetPath: 'public/api'
-    artifact: 'main'
+    artifact: 'api'
   displayName: 'Publish loaded data'
