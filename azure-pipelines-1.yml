@@ -4,5 +4,11 @@ pool:
   vmImage: 'windows-2019'
 
 steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'run'
+    projects: 'DataLoader'
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: 'public/api'
+    artifact: 'main'
