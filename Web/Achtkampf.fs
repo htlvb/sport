@@ -259,6 +259,10 @@ let view model dispatch =
             yield Section.section [] [
                 Container.container [] [
                     Heading.h2 [] [ str (sprintf "Achtkampf %s" (Group.toString model.SelectedGroup)) ]
+                    Notification.notification [] [
+                        Fa.i [ Fa.Solid.InfoCircle ] []
+                        span [ Style [ MarginLeft "10px" ] ] [ str "Zum Vergleichen zwei oder mehrere Personen auswählen." ]
+                    ]
                     Table.table [ Table.IsHoverable; Table.IsBordered; Table.IsStriped; Table.IsFullWidth ] [
                         thead [] tableHeader
                         tfoot [] (List.rev tableHeader)
