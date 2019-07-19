@@ -11,6 +11,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Web", "Web\Web.fsproj", "{F
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "functions", "functions\functions.fsproj", "{97E3101A-6824-4D61-A495-7243775C5C33}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DataLoader", "DataLoader\DataLoader.fsproj", "{E124113E-DCB1-4522-8667-13565EB75E46}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -37,5 +39,9 @@ Global
 		{97E3101A-6824-4D61-A495-7243775C5C33}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{97E3101A-6824-4D61-A495-7243775C5C33}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{97E3101A-6824-4D61-A495-7243775C5C33}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E124113E-DCB1-4522-8667-13565EB75E46}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E124113E-DCB1-4522-8667-13565EB75E46}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E124113E-DCB1-4522-8667-13565EB75E46}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E124113E-DCB1-4522-8667-13565EB75E46}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

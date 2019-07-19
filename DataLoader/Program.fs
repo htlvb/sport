@@ -1,32 +1,20 @@
-#load "Common/Utils.fs"
-#load "Common/String.fs"
-#load "Common/Path.fs"
-#load "Common/File.fs"
-#load "Common/Result.fs"
-#load "Common/List.fs"
-#load "Common/ParseWorksheet.fs"
-#load ".fake/build.fsx/intellisense.fsx"
-
-open Fake.Core
-open Fake.DotNet
-open Fake.IO
-open Fake.IO.FileSystemOperators
-open Fake.IO.Globbing.Operators
-open Fake.Core.TargetOperators
-open Microsoft.Graph
+﻿open Microsoft.Graph
 open Microsoft.Identity.Client
 open ParseWorksheet
+open System
 open System.Net
 open System.Net.Http.Headers
-open System.Text.RegularExpressions
 open System.Threading.Tasks
 open Thoth.Json.Net
-
-Target.initEnvironment ()
 
 let toSecureString (text: string) =
     // see https://stackoverflow.com/a/43084626/1293659
     NetworkCredential("", text).SecurePassword
+
+let environVarOrFail key =
+    let value = Environment.GetEnvironmentVariable key
+    if String.IsNullOrEmpty value then failwithf "Environment variable \"%s\" not set" key
+    else value
 
 let rec readAll initialRequest executeRequest getNextRequest =
     let rec fn request acc = async {
@@ -44,27 +32,27 @@ let getFiles (request: IDriveItemChildrenCollectionRequest) =
 let getWorksheets (request: IWorkbookWorksheetsCollectionRequest) =
     readAll request (fun r -> r.GetAsync() |> Async.AwaitTask) (fun r -> Option.ofObj r.NextPageRequest)
 
-Target.create "LoadData" (fun _ ->
+let loadData() =
     let clientApp =
-        PublicClientApplicationBuilder.Create(Environment.environVarOrFail "APP_ID")
-            .WithAuthority(AzureCloudInstance.AzurePublic, Environment.environVarOrFail "TENANT_ID")
+        PublicClientApplicationBuilder.Create(environVarOrFail "APP_ID")
+            .WithAuthority(AzureCloudInstance.AzurePublic, environVarOrFail "TENANT_ID")
             .Build()
 
     let authResult =
         clientApp
-            .AcquireTokenByUsernamePassword([| "Files.ReadWrite" |], Environment.environVarOrFail "AAD_USERNAME", Environment.environVarOrFail "AAD_PASSWORD" |> toSecureString )
+            .AcquireTokenByUsernamePassword([| "Files.ReadWrite" |], environVarOrFail "AAD_USERNAME", environVarOrFail "AAD_PASSWORD" |> toSecureString )
             .ExecuteAsync()
         |> Async.AwaitTask
         |> Async.RunSynchronously
 
     let authenticationProvider = DelegateAuthenticationProvider(fun request ->
-        request.Headers.Authorization <- new AuthenticationHeaderValue("Bearer", authResult.AccessToken)
+        request.Headers.Authorization <- AuthenticationHeaderValue("Bearer", authResult.AccessToken)
         Task.CompletedTask
     )
     let graphServiceClient = GraphServiceClient(authenticationProvider)
 
     let folder =
-        graphServiceClient.Me.Drive.Items.[Environment.environVarOrFail "FOLDER_ID"].Children.Request().OrderBy("name desc").Top(1).GetAsync()
+        graphServiceClient.Me.Drive.Items.[environVarOrFail "FOLDER_ID"].Children.Request().OrderBy("name desc").Top(1).GetAsync()
         |> Async.AwaitTask
         |> Async.RunSynchronously
         |> Seq.tryHead
@@ -105,27 +93,11 @@ Target.create "LoadData" (fun _ ->
             |> List.map ClassPerformances.encode
             |> Encode.list
             |> Encode.toString 2
-            |> File.writeAllText (__SOURCE_DIRECTORY__ |> global.Path.combine [ "public"; "api"; "achtkampf"; "data.json" ])
+            |> File.writeAllText ("." |> Path.combine [ "public"; "api"; "achtkampf"; "data.json" ])
         | Error errors ->
             failwithf "%d worksheet(s) couldn't be parsed: %A" (List.length errors) errors
-)
 
-// Target.create "Clean" (fun _ ->
-//     !! "src/**/bin"
-//     ++ "src/**/obj"
-//     |> Shell.cleanDirs 
-// )
-
-// Target.create "Build" (fun _ ->
-//     !! "src/**/*.*proj"
-//     |> Seq.iter (DotNet.build id)
-// )
-
-Target.create "All" ignore
-
-// "Clean"
-//   ==> "Build"
-"LoadData"
-   ==> "All"
-
-Target.runOrDefault "All"
+[<EntryPoint>]
+let main argv =
+    loadData ()
+    0

@@ -1,0 +1,4 @@
+group Build
+Microsoft.Graph
+Microsoft.Identity.Client
+Thoth.Json.Net
