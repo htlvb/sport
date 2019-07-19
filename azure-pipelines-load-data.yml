@@ -1,0 +1,22 @@
+trigger: none
+
+pool:
+  vmImage: 'windows-2019'
+
+steps:
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'run'
+    projects: 'DataLoader'
+  env:
+    APP_ID: $(appId)
+    TENANT_ID: $(tenantId)
+    AAD_USERNAME: $(aadUsername)
+    AAD_PASSWORD: $(aadPassword)
+    FOLDER_ID: $(folderId)
+  displayName: 'Run DataLoader'
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: 'public/api'
+    artifact: 'api'
+  displayName: 'Publish loaded data'
