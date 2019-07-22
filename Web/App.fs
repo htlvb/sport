@@ -57,7 +57,7 @@ open Fable.React.Props
 
 let view model dispatch =
     let header =
-        Navbar.navbar [] [
+        Navbar.navbar [ Navbar.Color IsPrimary ] [
             Navbar.Brand.div [] [
                 Navbar.Item.a [ Navbar.Item.Props [ Href "#" ] ]
                     [ img [ Style [ Width "5em" ]
