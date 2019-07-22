@@ -1,10 +1,11 @@
 # Sport
 Website for sporty activities.
 
-## Notes
+| Build web app | Load data |
+| ------------- | --------- |
+| [![Build Status](https://dev.azure.com/HTLVB/Sport/_apis/build/status/Build%20web%20app?branchName=master)](https://dev.azure.com/HTLVB/Sport/_build/latest?definitionId=1&branchName=master) | [![Build Status](https://dev.azure.com/HTLVB/Sport/_apis/build/status/Load%20data?branchName=master)](https://dev.azure.com/HTLVB/Sport/_build/latest?definitionId=2&branchName=master) |
 
-### Get excel workbook table rows
-https://graph.microsoft.com/v1.0/me/drive/root:/HTL-Achtkampf.xlsx:/workbook/worksheets('{00000000-0001-0000-0000-000000000000}')/tables('{91323E89-9930-4A51-A310-5BB36829B2A6}')/rows
+## Notes
 
 ### Trigger build in Azure DevOps
 https://docs.microsoft.com/en-us/rest/api/azure/devops/build/builds/queue?view=azure-devops-rest-5.0
