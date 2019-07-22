@@ -164,6 +164,9 @@ let view model dispatch =
                     yield td [] [ str (performance.MeasurementValue |> Option.map (sprintf "%g") |> Option.defaultValue "") ]
                     yield td [] [ str (performance.Points |> Option.map (sprintf "%d") |> Option.defaultValue "") ]
             ]
+        let scrollOnOverflow elem =
+            div [ Style [ OverflowX "auto" ] ] [ elem ]
+
         [
             yield Section.section [] [
                 Container.container [] [
@@ -253,6 +256,7 @@ let view model dispatch =
                                     yield studentRow i2 s2
                             ]
                         ]
+                        |> scrollOnOverflow
                     ]
                 ]
 
@@ -263,30 +267,28 @@ let view model dispatch =
                         Fa.i [ Fa.Solid.InfoCircle ] []
                         span [ Style [ MarginLeft "10px" ] ] [ str "Zum Vergleichen zwei oder mehrere Personen auswählen." ]
                     ]
-                    div [ Style [ OverflowX "scroll" ] ]
-                        [
-                            Table.table [ Table.IsHoverable; Table.IsBordered; Table.IsStriped; Table.IsFullWidth ] [
-                                thead [] tableHeader
-                                tfoot [] (List.rev tableHeader)
-                                tbody [] [
-                                    for (i, studentPerformances) in List.indexed data ->
-                                        tr
-                                            [
-                                                if List.contains studentPerformances model.StudentsToCompare then
-                                                    yield OnClick (fun _ev -> dispatch (RemoveStudentFromComparison studentPerformances))
-                                                    yield ClassName "is-selected"
-                                                else
-                                                    yield OnClick (fun _ev -> dispatch (AddStudentToComparison studentPerformances))
-                                            ]
-                                            [
-                                                yield td [] [ str (sprintf "%d" (i + 1)) ]
-                                                yield td [] [ str (Class.toString studentPerformances.Class) ]
-                                                yield td [] [ str (Student.fullName studentPerformances.Student) ]
-                                                yield! studentPerformanceRow studentPerformances
-                                            ]
-                                ]
-                            ]
+                    Table.table [ Table.IsHoverable; Table.IsBordered; Table.IsStriped; Table.IsFullWidth ] [
+                        thead [] tableHeader
+                        tfoot [] (List.rev tableHeader)
+                        tbody [] [
+                            for (i, studentPerformances) in List.indexed data ->
+                                tr
+                                    [
+                                        if List.contains studentPerformances model.StudentsToCompare then
+                                            yield OnClick (fun _ev -> dispatch (RemoveStudentFromComparison studentPerformances))
+                                            yield ClassName "is-selected"
+                                        else
+                                            yield OnClick (fun _ev -> dispatch (AddStudentToComparison studentPerformances))
+                                    ]
+                                    [
+                                        yield td [] [ str (sprintf "%d" (i + 1)) ]
+                                        yield td [] [ str (Class.toString studentPerformances.Class) ]
+                                        yield td [] [ str (Student.fullName studentPerformances.Student) ]
+                                        yield! studentPerformanceRow studentPerformances
+                                    ]
                         ]
+                    ]
+                    |> scrollOnOverflow
                 ]
             ]
         ]
