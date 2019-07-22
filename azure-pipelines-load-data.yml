@@ -3,6 +3,13 @@ trigger: none
 pool:
   vmImage: 'windows-2019'
 
+schedules:
+- cron: '0 0 * * *'
+  displayName: 'Nightly'
+  branches:
+    include: [ 'master' ]
+  always: true
+
 steps:
 - task: DotNetCoreCLI@2
   inputs:
