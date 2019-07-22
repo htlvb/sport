@@ -263,27 +263,30 @@ let view model dispatch =
                         Fa.i [ Fa.Solid.InfoCircle ] []
                         span [ Style [ MarginLeft "10px" ] ] [ str "Zum Vergleichen zwei oder mehrere Personen auswählen." ]
                     ]
-                    Table.table [ Table.IsHoverable; Table.IsBordered; Table.IsStriped; Table.IsFullWidth ] [
-                        thead [] tableHeader
-                        tfoot [] (List.rev tableHeader)
-                        tbody [] [
-                            for (i, studentPerformances) in List.indexed data ->
-                                tr
-                                    [
-                                        if List.contains studentPerformances model.StudentsToCompare then
-                                            yield OnClick (fun _ev -> dispatch (RemoveStudentFromComparison studentPerformances))
-                                            yield ClassName "is-selected"
-                                        else
-                                            yield OnClick (fun _ev -> dispatch (AddStudentToComparison studentPerformances))
-                                    ]
-                                    [
-                                        yield td [] [ str (sprintf "%d" (i + 1)) ]
-                                        yield td [] [ str (Class.toString studentPerformances.Class) ]
-                                        yield td [] [ str (Student.fullName studentPerformances.Student) ]
-                                        yield! studentPerformanceRow studentPerformances
-                                    ]
+                    div [ Style [ OverflowX "scroll" ] ]
+                        [
+                            Table.table [ Table.IsHoverable; Table.IsBordered; Table.IsStriped; Table.IsFullWidth ] [
+                                thead [] tableHeader
+                                tfoot [] (List.rev tableHeader)
+                                tbody [] [
+                                    for (i, studentPerformances) in List.indexed data ->
+                                        tr
+                                            [
+                                                if List.contains studentPerformances model.StudentsToCompare then
+                                                    yield OnClick (fun _ev -> dispatch (RemoveStudentFromComparison studentPerformances))
+                                                    yield ClassName "is-selected"
+                                                else
+                                                    yield OnClick (fun _ev -> dispatch (AddStudentToComparison studentPerformances))
+                                            ]
+                                            [
+                                                yield td [] [ str (sprintf "%d" (i + 1)) ]
+                                                yield td [] [ str (Class.toString studentPerformances.Class) ]
+                                                yield td [] [ str (Student.fullName studentPerformances.Student) ]
+                                                yield! studentPerformanceRow studentPerformances
+                                            ]
+                                ]
+                            ]
                         ]
-                    ]
                 ]
             ]
         ]
