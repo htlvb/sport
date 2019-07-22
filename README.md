@@ -8,4 +8,12 @@ Website for sporty activities.
 ## Notes
 
 ### Trigger build in Azure DevOps
-https://docs.microsoft.com/en-us/rest/api/azure/devops/build/builds/queue?view=azure-devops-rest-5.0
+see https://docs.microsoft.com/en-us/rest/api/azure/devops/build/builds/queue?view=azure-devops-rest-5.0
+
+```
+POST https://dev.azure.com/HTLVB/Sport/_apis/build/builds?api-version=5.0
+Authorization: Basic <username> <personal-access-token>
+Content-Type: application/json
+
+{"definition":{"id":2}}
+```
