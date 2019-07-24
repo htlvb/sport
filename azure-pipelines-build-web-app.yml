@@ -7,14 +7,17 @@ pool:
 steps:
 - script: yarn install --frozen-lockfile
   displayName: 'Restore npm packages'
-
 - script: dotnet restore
   displayName: 'Restore NuGet packages'
-
 - script: yarn webpack
   displayName: 'Build web app'
-
 - task: PublishPipelineArtifact@1
   inputs:
     targetPath: 'deploy'
-    artifact: 'deploy'
+    artifact: 'app'
+  displayName: 'Publish web app'
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: 'deploy.ps1'
+    artifact: 'deploy-script'
+  displayName: 'Publish deploy script'
