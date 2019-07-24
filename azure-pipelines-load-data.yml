@@ -27,3 +27,8 @@ steps:
     targetPath: 'public/api'
     artifact: 'api'
   displayName: 'Publish loaded data'
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: 'deploy.ps1'
+    artifact: 'deploy-script'
+  displayName: 'Publish deploy script'
