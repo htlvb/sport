@@ -11,6 +11,8 @@ Param(
   [string]$commitMessage
 )
 
+Get-Content $PSCommandPath | Write-Host
+
 function ExitOnError {
   if ($LASTEXITCODE -gt 0) { 
     throw "Command returned error code $LASTEXITCODE"
