@@ -17,6 +17,7 @@ function ExitOnError {
   }
 }
 
+# https://stackoverflow.com/a/55422946/1293659
 $env:GIT_REDIRECT_STDERR = "2>&1"
 
 $repoDir = Join-Path $workingDir "ghpages"
