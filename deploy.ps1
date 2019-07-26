@@ -23,18 +23,21 @@ $env:GIT_REDIRECT_STDERR = "2>&1"
 $repoDir = Join-Path $workingDir "ghpages"
 Write-Host "Cloning existing GitHub repository"
 git clone "https://${gitHubUsername}:$gitHubAccessToken@github.com/$repositoryOwner/$repositoryName.git" "--branch=$branchName" $repoDir; ExitOnError
-Write-Host "Removing existing files"
 if ($publishType -eq 'webapp') {
+    Write-Host "Removing existing files"
     Get-ChildItem $repoDir -Exclude .git,api | Remove-Item -Recurse -Force
+    Write-Host "Copying new files"
+    Copy-Item (Join-Path $sourceDir "**") $repoDir -Force -Recurse
 }
 elseif ($publishType -eq 'data') {
+    Write-Host "Removing existing files"
     Get-ChildItem (Join-Path $repoDir "api")  | Remove-Item -Recurse -Force
+    Write-Host "Copying new files"
+    Copy-Item (Join-Path $sourceDir "**") "$repoDir\api" -Force -Recurse
 }
 else {
     throw "Invalid publish type: $publishType"
 }
-Write-Host "Copying new files"
-Copy-Item (Join-Path $sourceDir "**") $repoDir -Force -Recurse
 Push-Location $repoDir
 try {
   git config user.email $gitHubEmail; ExitOnError
