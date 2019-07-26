@@ -11,8 +11,6 @@ Param(
   [string]$commitMessage
 )
 
-Get-Content $PSCommandPath | Write-Host
-
 function ExitOnError {
   if ($LASTEXITCODE -gt 0) { 
     throw "Command returned error code $LASTEXITCODE"
@@ -21,7 +19,7 @@ function ExitOnError {
 
 $repoDir = Join-Path $workingDir "ghpages"
 Write-Host "Cloning existing GitHub repository"
-git clone "https://${gitHubUsername}:$gitHubAccessToken@github.com/$repositoryOwner/$repositoryName.git" "--branch=$branchName" $repoDir 2>&1; ExitOnError
+. git clone "https://${gitHubUsername}:$gitHubAccessToken@github.com/$repositoryOwner/$repositoryName.git" "--branch=$branchName" $repoDir 2>&1; ExitOnError
 Write-Host "Removing existing files"
 if ($publishType -eq 'webapp') {
     Get-ChildItem $repoDir -Exclude .git,api | Remove-Item -Recurse -Force
