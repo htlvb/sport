@@ -8,7 +8,7 @@ open Fable.Elmish.Nile
 open Fable.Core.JsInterop
 open FSharp.Control
 open Fulma
-open ParseWorksheet
+open AchtkampfData
 open Thoth.Fetch
 open Thoth.Json
 

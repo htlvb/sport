@@ -1,6 +1,5 @@
 ﻿open Microsoft.Graph
 open Microsoft.Identity.Client
-open ParseWorksheet
 open System
 open System.Net
 open System.Net.Http.Headers
@@ -32,6 +31,100 @@ let getFiles (request: IDriveItemChildrenCollectionRequest) =
 let getWorksheets (request: IWorkbookWorksheetsCollectionRequest) =
     readAll request (fun r -> r.GetAsync() |> Async.AwaitTask) (fun r -> Option.ofObj r.NextPageRequest)
 
+let loadAchtkampfData (graphServiceClient: GraphServiceClient) =
+    let folder =
+        graphServiceClient.Me.Drive.Items.[environVarOrFail "ACHTKAMPF_FOLDER_ID"].Children.Request().OrderBy("name desc").Top(1).GetAsync()
+        |> Async.AwaitTask
+        |> Async.RunSynchronously
+        |> Seq.tryHead
+    match folder with
+    | None -> failwith "No folders found"
+    | Some folder ->
+        let files = getFiles (graphServiceClient.Me.Drive.Items.[folder.Id].Children.Request()) |> Async.RunSynchronously
+
+        let readFile (item: DriveItem) = async {
+            let worksheetsRequestBuilder = graphServiceClient.Me.Drive.Items.[item.Id].Workbook.Worksheets
+            let! worksheets = getWorksheets (worksheetsRequestBuilder.Request())
+            return!
+                worksheets
+                |> List.choose (fun worksheet -> Class.tryParse worksheet.Name |> Option.map (fun c -> worksheet, c))
+                |> List.map (fun (worksheet, schoolClass) -> async {
+                    let! values = worksheetsRequestBuilder.[worksheet.Id].UsedRange().Request().GetAsync() |> Async.AwaitTask
+                    let data = AchtkampfData.Worksheet.tryParse values.Values |> Result.mapError List.singleton
+                    return
+                        Ok AchtkampfData.ClassPerformances.create
+                        |> Result.apply (Ok schoolClass)
+                        |> Result.apply data
+                })
+                |> Async.Parallel
+        }
+
+        let data =
+            files
+            |> List.map readFile
+            |> Async.Parallel
+            |> Async.RunSynchronously
+            |> Seq.collect id
+            |> Seq.toList
+            |> List.sequenceResultApplicative
+        match data with
+        | Ok performances ->
+            printfn "%d worksheets successfully parsed" (List.length performances)
+            performances
+            |> List.map AchtkampfData.ClassPerformances.encode
+            |> Encode.list
+            |> Encode.toString 2
+            |> File.writeAllText ("." |> Path.combine [ "public"; "api"; "achtkampf"; "data.json" ])
+        | Error errors ->
+            failwithf "%d worksheet(s) couldn't be parsed: %A" (List.length errors) errors
+
+let loadHtlWarriorData (graphServiceClient: GraphServiceClient) =
+    let folder =
+        graphServiceClient.Me.Drive.Items.[environVarOrFail "HTL_WARRIOR_FOLDER_ID"].Children.Request().OrderBy("name desc").Top(1).GetAsync()
+        |> Async.AwaitTask
+        |> Async.RunSynchronously
+        |> Seq.tryHead
+    match folder with
+    | None -> failwith "No folders found"
+    | Some folder ->
+        let files = getFiles (graphServiceClient.Me.Drive.Items.[folder.Id].Children.Request()) |> Async.RunSynchronously
+
+        let readFile (item: DriveItem) = async {
+            let worksheetsRequestBuilder = graphServiceClient.Me.Drive.Items.[item.Id].Workbook.Worksheets
+            let! worksheets = getWorksheets (worksheetsRequestBuilder.Request())
+            return!
+                worksheets
+                |> List.choose (fun worksheet -> Class.tryParse worksheet.Name |> Option.map (fun c -> worksheet, c))
+                |> List.map (fun (worksheet, schoolClass) -> async {
+                    let! values = worksheetsRequestBuilder.[worksheet.Id].UsedRange().Request().GetAsync() |> Async.AwaitTask
+                    let data = HtlWarriorData.Worksheet.tryParse values.Values |> Result.mapError List.singleton
+                    return
+                        Ok HtlWarriorData.ClassPerformances.create
+                        |> Result.apply (Ok schoolClass)
+                        |> Result.apply data
+                })
+                |> Async.Parallel
+        }
+
+        let data =
+            files
+            |> List.map readFile
+            |> Async.Parallel
+            |> Async.RunSynchronously
+            |> Seq.collect id
+            |> Seq.toList
+            |> List.sequenceResultApplicative
+        match data with
+        | Ok performances ->
+            printfn "%d worksheets successfully parsed" (List.length performances)
+            performances
+            |> List.map HtlWarriorData.ClassPerformances.encode
+            |> Encode.list
+            |> Encode.toString 2
+            |> File.writeAllText ("." |> Path.combine [ "public"; "api"; "htl-warrior"; "data.json" ])
+        | Error errors ->
+            failwithf "%d worksheet(s) couldn't be parsed: %A" (List.length errors) errors
+
 let loadData() =
     let clientApp =
         PublicClientApplicationBuilder.Create(environVarOrFail "APP_ID")
@@ -51,51 +144,8 @@ let loadData() =
     )
     let graphServiceClient = GraphServiceClient(authenticationProvider)
 
-    let folder =
-        graphServiceClient.Me.Drive.Items.[environVarOrFail "FOLDER_ID"].Children.Request().OrderBy("name desc").Top(1).GetAsync()
-        |> Async.AwaitTask
-        |> Async.RunSynchronously
-        |> Seq.tryHead
-    match folder with
-    | None -> failwith "No folders found"
-    | Some folder ->
-        let files = getFiles (graphServiceClient.Me.Drive.Items.[folder.Id].Children.Request()) |> Async.RunSynchronously
-
-        let readFile (item: DriveItem) = async {
-            let worksheetsRequestBuilder = graphServiceClient.Me.Drive.Items.[item.Id].Workbook.Worksheets
-            let! worksheets = getWorksheets (worksheetsRequestBuilder.Request())
-            return!
-                worksheets
-                |> List.choose (fun worksheet -> Class.tryParse worksheet.Name |> Option.map (fun c -> worksheet, c))
-                |> List.map (fun (worksheet, schoolClass) -> async {
-                    let! values = worksheetsRequestBuilder.[worksheet.Id].UsedRange().Request().GetAsync() |> Async.AwaitTask
-                    let data = Worksheet.tryParse values.Values |> Result.mapError List.singleton
-                    return
-                        Ok ClassPerformances.create
-                        |> Result.apply (Ok schoolClass)
-                        |> Result.apply data
-                })
-                |> Async.Parallel
-        }
-
-        let data =
-            files
-            |> List.map readFile
-            |> Async.Parallel
-            |> Async.RunSynchronously
-            |> Seq.collect id
-            |> Seq.toList
-            |> List.sequenceResultApplicative
-        match data with
-        | Ok performances ->
-            printfn "%d worksheets successfully parsed" (List.length performances)
-            performances
-            |> List.map ClassPerformances.encode
-            |> Encode.list
-            |> Encode.toString 2
-            |> File.writeAllText ("." |> Path.combine [ "public"; "api"; "achtkampf"; "data.json" ])
-        | Error errors ->
-            failwithf "%d worksheet(s) couldn't be parsed: %A" (List.length errors) errors
+    loadAchtkampfData graphServiceClient
+    loadHtlWarriorData graphServiceClient
 
 [<EntryPoint>]
 let main argv =

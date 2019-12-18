@@ -1,6 +1,6 @@
 ﻿open Expecto
 open Newtonsoft.Json.Linq
-open ParseWorksheet
+open AchtkampfData
 open System.IO
 open System.Reflection
 
