@@ -1,10 +1,10 @@
-module Achtkampf
+module HtlWarrior
 
 open Elmish.Streams
 open Fable.FontAwesome
 open FSharp.Control
 open Fulma
-open AchtkampfData
+open HtlWarriorData
 open Thoth.Fetch
 open Thoth.Json
 
@@ -13,8 +13,8 @@ type FetchError =
     | DecodeError of string
 
 type Group =
-    | All
-    | Discipline of Discipline
+    | Student
+    | Class
 
 type RankType =
     | Normal
@@ -31,12 +31,20 @@ module Rank =
         | Normal -> sprintf "%d" rank.Value
         | SameAsBefore -> ""
 
-type CalculatedStudentPerformances = {
+type CalculatedStudentPerformance = {
+    TotalRank: Rank
+    Class: Class
+    Student: Student
+    Performance: Performance
+    TotalTime: System.TimeSpan
+}
+
+type CalculatedClassPerformances = {
     TotalRank: Rank
     Class: Class
     Student: Student
     Performances: Performance list
-    TotalPoints: int
+    TotalTime: System.TimeSpan
 }
 
 let sortAndAddRanks pointsFn list =
@@ -57,45 +65,46 @@ let sortAndAddRanks pointsFn list =
     |> List.sortByDescending pointsFn
     |> fn []
 
-module CalculatedStudentPerformances =
+module CalculatedStudentPerformance =
     let fromData (data: ClassPerformances list) =
         data
         |> List.collect (fun classPerformances ->
             classPerformances.Performances
-            |> List.map (fun studentPerformances ->
-                let totalPoints =
-                    studentPerformances.Performances
-                    |> List.sumBy (fun v -> v.Points |> Option.defaultValue 0)
-                (totalPoints, classPerformances.Class, studentPerformances)
+            |> List.map (fun studentPerformance ->
+                let totalTime = studentPerformance.Performance.TotalTime
+                (totalTime, classPerformances.Class, studentPerformance)
             )
         )
-        |> sortAndAddRanks (fun (totalPoints, _, _) -> totalPoints)
-        |> List.map (fun (totalRank, (totalPoints, schoolClass, studentPerformances)) ->
+        |> sortAndAddRanks (fun (totalTime, _, _) -> -totalTime.Ticks)
+        |> List.map (fun (totalRank, (totalTime, schoolClass, studentPerformance)) ->
             {
                 TotalRank = totalRank
                 Class = schoolClass
-                Student = studentPerformances.Student
-                Performances = studentPerformances.Performances
-                TotalPoints = totalPoints
+                Student = studentPerformance.Student
+                Performance = studentPerformance.Performance
+                TotalTime = totalTime
             }
         )
 
 type Msg =
     | LoadDataResponse of Result<ClassPerformances list, FetchError>
     | SelectGroup of Group
-    | AddStudentToComparison of CalculatedStudentPerformances
-    | RemoveStudentFromComparison of CalculatedStudentPerformances
+    | AddStudentToComparison of CalculatedStudentPerformance
+    | RemoveStudentFromComparison of CalculatedStudentPerformance
+    | AddClassToComparison of CalculatedClassPerformances
+    | RemoveClassFromComparison of CalculatedClassPerformances
     | ResetComparison
 
 module Group =
     let toString = function
-        | All -> "Gesamtwertung"
-        | Discipline discipline -> discipline.Name
+        | Student -> "Einzelwertung"
+        | Class -> "Klassenwertung"
 
 type LoadedModel = {
-    Data: CalculatedStudentPerformances list
+    Data: CalculatedStudentPerformance list
     SelectedGroup: Group
-    StudentsToCompare: CalculatedStudentPerformances list
+    StudentsToCompare: CalculatedStudentPerformance list
+    ClassesToCompare: CalculatedClassPerformances list
 }
 
 type Model =
@@ -109,9 +118,10 @@ let update msg model =
     match model, msg with
     | _, LoadDataResponse (Ok classPerformances) ->
         Loaded {
-            Data = CalculatedStudentPerformances.fromData classPerformances
-            SelectedGroup = All
+            Data = CalculatedStudentPerformance.fromData classPerformances
+            SelectedGroup = Student
             StudentsToCompare = []
+            ClassesToCompare = []
         }
     | _, LoadDataResponse (Error error) ->
         LoadError error
@@ -124,6 +134,12 @@ let update msg model =
     | Loaded model, RemoveStudentFromComparison student ->
         Loaded { model with StudentsToCompare = model.StudentsToCompare |> List.except [ student ] }
     | _, RemoveStudentFromComparison _ -> model
+    | Loaded model, AddClassToComparison ``class`` ->
+        Loaded { model with ClassesToCompare = model.ClassesToCompare @ [ ``class`` ] }
+    | _, AddClassToComparison _ -> model
+    | Loaded model, RemoveClassFromComparison ``class`` ->
+        Loaded { model with ClassesToCompare = model.ClassesToCompare |> List.except [ ``class`` ] }
+    | _, RemoveClassFromComparison _ -> model
     | Loaded model, ResetComparison ->
         Loaded { model with StudentsToCompare = [] }
     | _, ResetComparison _ -> model
@@ -140,44 +156,32 @@ let view model dispatch =
             ]
         ]
     | Loaded model ->
-        let disciplines =
-            model.Data
-            |> List.collect (fun studentPerformances -> studentPerformances.Performances)
-            |> List.map (fun performance -> performance.Discipline)
-            |> List.distinct
         let groups =
             [
-                yield Group.All
-                yield! List.map Discipline disciplines
+                Student
+                Group.Class
             ]
         let performanceCells performance =
             [
-                td [] [ str (performance.MeasurementValue |> Option.map (sprintf "%g") |> Option.defaultValue "") ]
-                td [] [ str (performance.Points |> Option.map (sprintf "%d") |> Option.defaultValue "") ]
+                td [] [ str (performance.RunTime.ToString("mm:ss.FF")) ]
+                td [] [ str (string performance.NumberOfFails) ]
             ]
-        let studentPerformanceRow studentPerformances =
+        let studentPerformanceRow (studentPerformance: CalculatedStudentPerformance) =
             [
-                yield td [] [ str (sprintf "%d" studentPerformances.TotalPoints) ]
-                for performance in studentPerformances.Performances do
-                    yield! performanceCells performance
+                td [] [ str (studentPerformance.TotalTime.ToString("mm:ss.FF")) ]
+                yield! performanceCells studentPerformance.Performance
             ]
         let scrollOnOverflow elem =
             div [ Style [ OverflowX "auto" ] ] [ elem ]
         let fullTableHeader =
             [
                 tr [] [
-                    yield th [ ColSpan 4 ] []
-                    for discipline in disciplines ->
-                        th [ ColSpan 2 ] [ str discipline.Name ]
-                ]
-                tr [] [
-                    yield th [ Title "Rang" ] [ Fa.i [ Fa.Solid.Medal ] [] ]
-                    yield th [ Title "Klasse" ] [ Fa.i [ Fa.Solid.Users ] [] ]
-                    yield th [ Title "Name" ] [ Fa.i [ Fa.Solid.User ] [] ]
-                    yield th [ Title "Gesamtpunkte" ] [ Fa.i [ Fa.Solid.Poll ] []; sub [] [ str "Σ" ] ]
-                    for discipline in disciplines do
-                        yield th [] [ str discipline.Measurement ]
-                        yield th [ Title "Punkte" ] [ Fa.i [ Fa.Solid.Poll ] [] ]
+                    th [ Title "Rang" ] [ Fa.i [ Fa.Solid.Medal ] [] ]
+                    th [ Title "Klasse" ] [ Fa.i [ Fa.Solid.Users ] [] ]
+                    th [ Title "Name" ] [ Fa.i [ Fa.Solid.User ] [] ]
+                    th [ Title "Gesamtzeit" ] [ Fa.i [ Fa.Solid.Stopwatch ] []; sub [] [ str "Σ" ] ]
+                    th [ Title "Anzahl Fails" ] [ Fa.i [ Fa.Solid.Times ] [] ]
+                    th [ Title "Punkte" ] [ Fa.i [ Fa.Solid.Stopwatch ] [] ]
                 ]
             ]
 
@@ -186,7 +190,7 @@ let view model dispatch =
                 Table.table [ Table.IsBordered; Table.IsFullWidth ] [
                     thead [] fullTableHeader
                     tbody [] [
-                        let studentRow studentPerformances =
+                        let studentRow (studentPerformances: CalculatedStudentPerformance) =
                             tr [] [
                                 yield td [] [ str (sprintf "%d" studentPerformances.TotalRank.Value) ]
                                 yield td [] [ str (Class.toString studentPerformances.Class) ]
@@ -211,21 +215,16 @@ let view model dispatch =
                             td [ Class className ] [ str (sprintf "%+d" (v1 - v2)) ]
 
                         let diffColsPerformance p1 p2 =
-                            let p1Points = Option.defaultValue 0 p1.Points
-                            let p2Points = Option.defaultValue 0 p2.Points
-                            let p1Value = Option.defaultValue 0. p1.MeasurementValue
-                            let p2Value = Option.defaultValue 0. p2.MeasurementValue
-
                             let className =
-                                if p1Points > p2Points then "has-background-success"
-                                elif p1Points = p2Points then "has-background-warning"
+                                if p1.RunTime < p2.RunTime then "has-background-success"
+                                elif p1.RunTime = p2.RunTime then "has-background-warning"
                                 else "has-background-danger"
                             let (sign, diff) =
-                                let r = System.Math.Round(p1Value - p2Value, 5)
-                                if r < 0. then ("", r)
+                                let r = p2.RunTime - p1.RunTime
+                                if r < System.TimeSpan.Zero then ("", r)
                                 else ("+", r)
                             [
-                                yield td [ Class className ] [ str (sprintf "%s%g" sign diff) ]
+                                yield td [ Class className ] [ str (sprintf "%s%s" sign (diff.ToString("mm:ss.FF"))) ]
                                 yield diffColPoints p1Points p2Points
                             ]
 
@@ -378,7 +377,7 @@ let view model dispatch =
         []
 
 let stream states msgs =
-    let loadData =
+    let loadAchtkampfData =
         AsyncRx.ofPromise (promise {
             let! response = Fetch.tryFetchAs ("api/achtkampf/data.json", Decode.list ClassPerformances.decoder)
             return response |> Result.mapError DecodeError
@@ -389,7 +388,7 @@ let stream states msgs =
         msgs
 
         states
-        |> AsyncRx.flatMapLatest (snd >> function | NotLoaded -> loadData | _ -> AsyncRx.empty ())
-        |> AsyncRx.map LoadDataResponse
+        |> AsyncRx.flatMapLatest (snd >> function | NotLoaded -> loadAchtkampfData | _ -> AsyncRx.empty ())
+        |> AsyncRx.map LoadAchtkampfResponse
     ]
     |> AsyncRx.mergeSeq

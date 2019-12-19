@@ -8,26 +8,27 @@ open Fable.Elmish.Nile
 open Fable.Core.JsInterop
 open FSharp.Control
 open Fulma
-open AchtkampfData
-open Thoth.Fetch
-open Thoth.Json
 
 importAll "../sass/main.sass"
 
 type Page =
     | Achtkampf
+    | HtlWarrior
 
 let toHash page =
     match page with
     | Achtkampf -> "#achtkampf"
+    | HtlWarrior -> "#htl-warrior"
 
 let pageParser =
     oneOf [
         map Achtkampf (s "achtkampf")
+        map HtlWarrior (s "htl-warrior")
     ]
 
 type Msg =
     | AchtkampfMsg of Achtkampf.Msg
+    | HtlWarriorMsg of HtlWarrior.Msg
 
 type NavigationError =
     | InvalidUrl
@@ -35,6 +36,7 @@ type NavigationError =
 type Model = {
     CurrentPage: Result<Page, NavigationError>
     Achtkampf: Achtkampf.Model
+    HtlWarrior: HtlWarrior.Model
 }
 
 let urlUpdate (result : Page option) model =
@@ -45,12 +47,17 @@ let urlUpdate (result : Page option) model =
         { model with CurrentPage = Ok page }
 
 let init result =
-    { CurrentPage = Ok Achtkampf; Achtkampf = Achtkampf.init }
+    {
+        CurrentPage = Ok Achtkampf
+        Achtkampf = Achtkampf.init
+        HtlWarrior = HtlWarrior.init
+    }
     |> urlUpdate result
 
 let update msg model =
     match msg with
     | AchtkampfMsg msg -> { model with Achtkampf = Achtkampf.update msg model.Achtkampf }
+    | HtlWarriorMsg msg -> { model with HtlWarrior = HtlWarrior.update msg model.HtlWarrior }
 
 open Fable.React
 open Fable.React.Props
@@ -64,7 +71,8 @@ let view model dispatch =
                             Src "img/logo_with_bg.svg" ] ]
             ]
             Navbar.Start.div [] [
-                Navbar.Item.a [ Navbar.Item.IsTab; Navbar.Item.IsActive true ] [ str "Achtkampf 💪" ]
+                Navbar.Item.a [ Navbar.Item.IsTab; Navbar.Item.IsActive (model.CurrentPage = Ok Achtkampf) ] [ str "Achtkampf 💪" ]
+                Navbar.Item.a [ Navbar.Item.IsTab; Navbar.Item.IsActive (model.CurrentPage = Ok HtlWarrior) ] [ str "HTL Warrior 🐱‍👤" ]
             ]
         ]
 
@@ -113,11 +121,25 @@ let stream states msgs =
                 match msg with
                 | None -> Some (None, state.Achtkampf)
                 | Some (AchtkampfMsg msg) -> Some (Some msg, state.Achtkampf)
+                | Some _ -> None
             ),
-            msgs |> AsyncRx.choose (function | AchtkampfMsg msg -> Some msg)
+            msgs |> AsyncRx.choose (function | AchtkampfMsg msg -> Some msg | _ -> None)
         )
         ||> Achtkampf.stream
         |> AsyncRx.map AchtkampfMsg
+
+        (
+            states
+            |> AsyncRx.choose (fun (msg, state) ->
+                match msg with
+                | None -> Some (None, state.HtlWarrior)
+                | Some (HtlWarriorMsg msg) -> Some (Some msg, state.HtlWarrior)
+                | Some _ -> None
+            ),
+            msgs |> AsyncRx.choose (function | HtlWarriorMsg msg -> Some msg | _ -> None)
+        )
+        ||> HtlWarrior.stream
+        |> AsyncRx.map HtlWarriorMsg
     ]
     |> AsyncRx.mergeSeq
 
