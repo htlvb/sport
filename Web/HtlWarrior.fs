@@ -13,8 +13,8 @@ type FetchError =
     | DecodeError of string
 
 type Group =
-    | Student
-    | Class
+    | StudentGroup
+    | ClassGroup
 
 type RankType =
     | Normal
@@ -31,10 +31,13 @@ module Rank =
         | Normal -> sprintf "%d" rank.Value
         | SameAsBefore -> ""
 
-type CalculatedStudentPerformance = {
+type GroupItem =
+    | StudentGroupItem of Student * Class
+    | ClassGroupItem of Class
+
+type CalculatedPerformance = {
     TotalRank: Rank
-    Class: Class
-    Student: Student
+    GroupItem: GroupItem
     Performance: Performance
     TotalTime: System.TimeSpan
 }
@@ -168,8 +171,8 @@ let view model dispatch =
             ]
         let studentPerformanceRow (studentPerformance: CalculatedStudentPerformance) =
             [
-                td [] [ str (studentPerformance.TotalTime.ToString("mm:ss.FF")) ]
                 yield! performanceCells studentPerformance.Performance
+                td [] [ str (studentPerformance.TotalTime.ToString("mm:ss.FF")) ]
             ]
         let scrollOnOverflow elem =
             div [ Style [ OverflowX "auto" ] ] [ elem ]
@@ -179,9 +182,9 @@ let view model dispatch =
                     th [ Title "Rang" ] [ Fa.i [ Fa.Solid.Medal ] [] ]
                     th [ Title "Klasse" ] [ Fa.i [ Fa.Solid.Users ] [] ]
                     th [ Title "Name" ] [ Fa.i [ Fa.Solid.User ] [] ]
-                    th [ Title "Gesamtzeit" ] [ Fa.i [ Fa.Solid.Stopwatch ] []; sub [] [ str "Σ" ] ]
+                    th [ Title "Laufzeit" ] [ Fa.i [ Fa.Solid.Stopwatch ] [] ]
                     th [ Title "Anzahl Fails" ] [ Fa.i [ Fa.Solid.Times ] [] ]
-                    th [ Title "Punkte" ] [ Fa.i [ Fa.Solid.Stopwatch ] [] ]
+                    th [ Title "Gesamtzeit" ] [ Fa.i [ Fa.Solid.Stopwatch ] []; sub [] [ str "Σ" ] ]
                 ]
             ]
 
@@ -192,9 +195,9 @@ let view model dispatch =
                     tbody [] [
                         let studentRow (studentPerformances: CalculatedStudentPerformance) =
                             tr [] [
-                                yield td [] [ str (sprintf "%d" studentPerformances.TotalRank.Value) ]
-                                yield td [] [ str (Class.toString studentPerformances.Class) ]
-                                yield td [] [
+                                td [] [ str (sprintf "%d" studentPerformances.TotalRank.Value) ]
+                                td [] [ str (Class.toString studentPerformances.Class) ]
+                                td [] [
                                     div [ Style [ Display DisplayOptions.Flex; JustifyContent "space-between"; AlignItems AlignItemsOptions.Center ] ] [
                                         span [] [ str (Student.fullName studentPerformances.Student) ]
                                         Delete.delete
@@ -207,41 +210,37 @@ let view model dispatch =
                                 ]
                                 yield! studentPerformanceRow studentPerformances
                             ]
-                        let diffColPoints v1 v2 =
+                        let diffColTime v1 v2 =
                             let className =
-                                if v1 > v2 then "has-background-success"
+                                if v1 < v2 then "has-background-success"
                                 elif v1 = v2 then "has-background-warning"
                                 else "has-background-danger"
-                            td [ Class className ] [ str (sprintf "%+d" (v1 - v2)) ]
-
-                        let diffColsPerformance p1 p2 =
-                            let className =
-                                if p1.RunTime < p2.RunTime then "has-background-success"
-                                elif p1.RunTime = p2.RunTime then "has-background-warning"
-                                else "has-background-danger"
                             let (sign, diff) =
-                                let r = p2.RunTime - p1.RunTime
+                                let r = p1.RunTime - p2.RunTime
                                 if r < System.TimeSpan.Zero then ("", r)
                                 else ("+", r)
+                            td [ Class className ] [ str (sprintf "%s%s" sign (diff.ToString("mm:ss.FF"))) ]
+
+                        let diffColsPerformance p1 p2 =
                             [
-                                yield td [ Class className ] [ str (sprintf "%s%s" sign (diff.ToString("mm:ss.FF"))) ]
-                                yield diffColPoints p1Points p2Points
+                                diffColTime p1.RunTime p2.RunTime
+                                diffColPoints p1Points p2Points
                             ]
 
                         let diffRow s1 s2 =
                             tr [] [
-                                yield td [ ColSpan 3 ] []
-                                yield diffColPoints s1.TotalPoints s2.TotalPoints
+                                td [ ColSpan 3 ] []
                                 yield!
                                     List.zip s1.Performances s2.Performances
                                     |> List.collect (uncurry diffColsPerformance)
+                                diffColTime s1.TotalTime s2.TotalTime
                             ]
 
                         for (i, (s1, s2)) in model.StudentsToCompare |> List.pairwise |> List.indexed do
                             if i = 0 then
-                                yield studentRow s1
-                            yield diffRow s1 s2
-                            yield studentRow s2
+                                studentRow s1
+                            diffRow s1 s2
+                            studentRow s2
                     ]
                 ]
                 |> scrollOnOverflow
@@ -250,28 +249,28 @@ let view model dispatch =
 
         let dataTable =
             match model.SelectedGroup with
-            | Group.All ->
+            | Student ->
                 Table.table [ Table.IsHoverable; Table.IsBordered; Table.IsStriped; Table.IsFullWidth ] [
                     thead [] fullTableHeader
                     tfoot [] (List.rev fullTableHeader)
                     tbody [] [
                             let data =
                                 model.Data
-                                |> List.takeWhile (fun studentPerformances -> studentPerformances.TotalRank.Value <= 40 && studentPerformances.TotalPoints > 0)
+                                |> List.takeWhile (fun studentPerformances -> studentPerformances.TotalRank.Value <= 40 && studentPerformances.TotalTime > TimeSpan.Zero)
 
                             for studentPerformances in data ->
                                 tr
                                     [
                                         if List.contains studentPerformances model.StudentsToCompare then
-                                            yield OnClick (fun _ev -> dispatch (RemoveStudentFromComparison studentPerformances))
-                                            yield ClassName "is-selected"
+                                            OnClick (fun _ev -> dispatch (RemoveStudentFromComparison studentPerformances))
+                                            ClassName "is-selected"
                                         else
-                                            yield OnClick (fun _ev -> dispatch (AddStudentToComparison studentPerformances))
+                                            OnClick (fun _ev -> dispatch (AddStudentToComparison studentPerformances))
                                     ]
                                     [
-                                        yield td [] [ str (Rank.toString studentPerformances.TotalRank) ]
-                                        yield td [] [ str (Class.toString studentPerformances.Class) ]
-                                        yield td [] [ str (Student.fullName studentPerformances.Student) ]
+                                        td [] [ str (Rank.toString studentPerformances.TotalRank) ]
+                                        td [] [ str (Class.toString studentPerformances.Class) ]
+                                        td [] [ str (Student.fullName studentPerformances.Student) ]
                                         yield! studentPerformanceRow studentPerformances
                                     ]
                     ]
@@ -280,12 +279,12 @@ let view model dispatch =
             | Discipline discipline ->
                 let tableHeader =
                     tr [] [
-                        yield th [ Title "Rang" ] [ Fa.i [ Fa.Solid.Medal ] [] ]
-                        yield th [ Title "Gesamtrang" ] [ Fa.i [ Fa.Solid.Medal ] [ ]; sub [] [ str "Σ" ] ]
-                        yield th [ Title "Klasse" ] [ Fa.i [ Fa.Solid.Users ] [] ]
-                        yield th [ Title "Name" ] [ Fa.i [ Fa.Solid.User ] [] ]
-                        yield th [] [ str discipline.Measurement ]
-                        yield th [ Title "Punkte" ] [ Fa.i [ Fa.Solid.Poll ] [] ]
+                        th [ Title "Rang" ] [ Fa.i [ Fa.Solid.Medal ] [] ]
+                        th [ Title "Gesamtrang" ] [ Fa.i [ Fa.Solid.Medal ] [ ]; sub [] [ str "Σ" ] ]
+                        th [ Title "Klasse" ] [ Fa.i [ Fa.Solid.Users ] [] ]
+                        th [ Title "Name" ] [ Fa.i [ Fa.Solid.User ] [] ]
+                        th [] [ str discipline.Measurement ]
+                        th [ Title "Punkte" ] [ Fa.i [ Fa.Solid.Poll ] [] ]
                     ]
                 Table.table [ Table.IsHoverable; Table.IsBordered; Table.IsStriped ] [
                     thead [] [ tableHeader ]
